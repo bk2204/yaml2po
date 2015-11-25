@@ -1,0 +1,51 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Getopt::Long ();
+use YAML::Syck ();
+
+sub kv_to_string {
+	my ($k, $v) = @_;
+
+	foreach my $s ($k, $v) {
+		$s =~ s/"/\\"/g;
+	}
+
+	return "msgid \"$k\"\nmsgstr \"$v\"\n";
+}
+
+sub script {
+	my (@args) = @_;
+	my $help;
+
+	Getopt::Long::GetOptionsFromArray(
+		\@args,
+		"help" => \$help
+	) or return usage(1);
+	return usage(0) if $help;
+
+	local @ARGV = @args;
+	local $YAML::Syck::SortKeys = 1;
+	local $YAML::Syck::LoadBlessed = 0;
+
+	my $data = YAML::Syck::Load(do { local $/; <> });
+	foreach my $k (sort keys %$data) {
+		print kv_to_string($k, $data->{$k}) . "\n";
+	}
+	return 0;
+}
+
+sub usage {
+	my $ret = shift;
+	print <<EOM;
+yaml2po [FILE]
+
+Process the specified FILE (or standard input) as YAML and write a gettext
+format po file to standard output.
+EOM
+	return $ret;
+}
+
+exit script(@ARGV) unless caller;
