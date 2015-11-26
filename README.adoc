@@ -1,0 +1,10 @@
+yaml2po and po2yaml
+===================
+
+These are two simple Perl scripts that convert between YAML files containing a
+hash of source strings to translated strings and gettext PO files.  Both scripts
+read from the files on the command line (or standard input) and write to
+standard output.
+
+Note that the generated PO files are very minimal, since the YAML input is only
+expected to contain a single hash.
