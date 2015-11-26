@@ -1,0 +1,81 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Getopt::Long ();
+use YAML::Syck ();
+
+# Make the YAML contain raw UTF-8, which is much easier to read than hex
+# escapes.
+sub clean_yaml {
+	my $yaml = shift;
+
+	$yaml =~ s/\\x([89A-F][0-9A-F])/chr(hex($1))/ge;
+
+	return $yaml;
+}
+
+sub unescape {
+	my $text = shift;
+
+	my $chars = {
+		'"'  => '"',
+		'n'  => "\n",
+		"\\" => "\\",
+	};
+
+	my $keys = join('', sort keys %$chars);
+	$text =~ s/\\([\Q$keys\E])/$chars->{$1}/ge;
+
+	return $text;
+}
+
+sub script {
+	my (@args) = @_;
+	my $help;
+
+	Getopt::Long::GetOptionsFromArray(
+		\@args,
+		"help" => \$help
+	) or return usage(1);
+	return usage(0) if $help;
+
+	local @ARGV = @args;
+	local $YAML::Syck::SingleQuote = 1;
+	local $YAML::Syck::SortKeys = 1;
+	local $YAML::Syck::LoadBlessed = 0;
+
+	my $data = {};
+	my $k;
+	while (defined(my $line = <>)) {
+		if ($line =~ /^msgid\s+"(.*)"\s*$/) {
+			$k = unescape($1);
+		}
+		elsif ($line =~ /^msgstr\s+"(.*)"\s*$/) {
+			unless (defined $k) {
+				warn "Missing msgid line for msgstr \"$1\"";
+				next;
+			}
+			$data->{$k} = unescape($1);
+		}
+		else {
+			undef $k;
+		}
+	}
+	print clean_yaml(YAML::Syck::Dump($data));
+	return 0;
+}
+
+sub usage {
+	my $ret = shift;
+	print <<EOM;
+po2yaml [FILE]
+
+Process the specified FILE (or standard input) as a gettext format po file and
+convert it to a YAML file mapping source strings to translated strings.
+EOM
+	return $ret;
+}
+
+exit script(@ARGV) unless caller;

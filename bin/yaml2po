@@ -10,7 +10,9 @@ sub kv_to_string {
 	my ($k, $v) = @_;
 
 	foreach my $s ($k, $v) {
+		$s =~ s/\\/\\\\/g;
 		$s =~ s/"/\\"/g;
+		$s =~ s/\n/\\n/g;
 	}
 
 	return "msgid \"$k\"\nmsgstr \"$v\"\n";
